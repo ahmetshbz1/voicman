@@ -22,7 +22,7 @@ private final class LongPressDraggablePanel: NSPanel {
     private var dragWorkItem: DispatchWorkItem?
     private var isDragInProgress = false
 
-    override var canBecomeKey: Bool { true }
+    override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
@@ -93,10 +93,6 @@ final class FloatingPanelController {
         hideTask?.cancel()
         hideTask = nil
         panel?.orderFrontRegardless()
-        panel?.makeKey()
-        if let responder = panel?.contentView?.subviews.first {
-            panel?.makeFirstResponder(responder)
-        }
     }
 
     func hide() {

@@ -23,14 +23,16 @@ final class PasteboardService: PasteboardServiceProtocol {
         if !finalText.isEmpty {
             if shouldPaste {
                 copy(text: finalText)
-                simulatePaste()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self.simulatePaste()
+                }
             } else if shouldCopy {
                 copy(text: finalText)
             }
         }
 
         if let saved = savedClipboard, shouldPaste && !shouldCopy {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(saved, forType: .string)
             }
