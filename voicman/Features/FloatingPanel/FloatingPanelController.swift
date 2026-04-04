@@ -7,6 +7,7 @@ private final class TransparentHostingView<Content: View>: NSHostingView<Content
 
 private final class LongPressDraggablePanel: NSPanel {
     var onLongPress: (() -> Void)?
+    var onDragEnded: (() -> Void)?
     var longPressDelay: TimeInterval = 0.35
 
     private var dragWorkItem: DispatchWorkItem?
@@ -19,6 +20,9 @@ private final class LongPressDraggablePanel: NSPanel {
             super.sendEvent(event)
         case .leftMouseUp:
             cancelLongPress()
+            if isDragInProgress {
+                onDragEnded?()
+            }
             isDragInProgress = false
             super.sendEvent(event)
         default:
@@ -67,9 +71,13 @@ final class FloatingPanelController {
         hideTask?.cancel()
         hideTask = nil
         panel?.orderFrontRegardless()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.performSubtleHaptic()
+        }
     }
 
     func hide() {
+        performSubtleHaptic()
         panel?.orderOut(nil)
         viewModel.hide()
     }
@@ -105,8 +113,12 @@ final class FloatingPanelController {
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = false
-        panel.onLongPress = {
+        panel.onLongPress = { [weak self] in
+            self?.viewModel.isDragging = true
             NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
+        }
+        panel.onDragEnded = { [weak self] in
+            self?.viewModel.isDragging = false
         }
 
         let container = NSView(frame: NSRect(origin: .zero, size: Constants.size))
@@ -142,5 +154,9 @@ final class FloatingPanelController {
         let x = screenFrame.midX - panelSize.width / 2
         let y = screenFrame.minY + 28
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    private func performSubtleHaptic() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
     }
 }

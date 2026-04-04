@@ -6,6 +6,11 @@ struct RecordingView: View {
     var onTap: (() -> Void)?
 
     var body: some View {
+        panelContent
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var panelContent: some View {
         Group {
             switch viewModel.state {
             case .idle:         idlePanel
@@ -14,7 +19,6 @@ struct RecordingView: View {
             case .error:        errorPanel
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var idlePanel: some View {

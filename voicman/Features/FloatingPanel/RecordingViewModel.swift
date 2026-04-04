@@ -13,6 +13,7 @@ final class RecordingViewModel: ObservableObject {
 
     @Published private(set) var state: State = .idle
     @Published private(set) var isVisible: Bool = false
+    @Published var isDragging: Bool = false
     @Published var audioLevel: Float = 0
     @Published var partialText: String = ""
 
@@ -28,6 +29,7 @@ final class RecordingViewModel: ObservableObject {
 
     func hide() {
         isVisible = false
+        isDragging = false
         state = .idle
         partialText = ""
     }
