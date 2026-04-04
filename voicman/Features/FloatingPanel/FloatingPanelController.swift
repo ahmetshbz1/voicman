@@ -5,6 +5,48 @@ private final class TransparentHostingView<Content: View>: NSHostingView<Content
     override var isOpaque: Bool { false }
 }
 
+private final class LongPressDraggablePanel: NSPanel {
+    var onLongPress: (() -> Void)?
+    var longPressDelay: TimeInterval = 0.35
+
+    private var dragWorkItem: DispatchWorkItem?
+    private var isDragInProgress = false
+
+    override func sendEvent(_ event: NSEvent) {
+        switch event.type {
+        case .leftMouseDown:
+            scheduleLongPress(for: event)
+            super.sendEvent(event)
+        case .leftMouseUp:
+            cancelLongPress()
+            isDragInProgress = false
+            super.sendEvent(event)
+        default:
+            super.sendEvent(event)
+        }
+    }
+
+    private func scheduleLongPress(for event: NSEvent) {
+        cancelLongPress()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self, !self.isDragInProgress else { return }
+            self.isDragInProgress = true
+            self.onLongPress?()
+            self.performDrag(with: event)
+            self.isDragInProgress = false
+        }
+
+        dragWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + longPressDelay, execute: workItem)
+    }
+
+    private func cancelLongPress() {
+        dragWorkItem?.cancel()
+        dragWorkItem = nil
+    }
+}
+
 @MainActor
 final class FloatingPanelController {
     private enum Constants {
@@ -48,7 +90,7 @@ final class FloatingPanelController {
             self?.onButtonTapped?()
         }
 
-        let panel = NSPanel(
+        let panel = LongPressDraggablePanel(
             contentRect: NSRect(origin: .zero, size: Constants.size),
             styleMask: [.nonactivatingPanel, .borderless],
             backing: .buffered,
@@ -63,6 +105,9 @@ final class FloatingPanelController {
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = false
+        panel.onLongPress = {
+            NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
+        }
 
         let container = NSView(frame: NSRect(origin: .zero, size: Constants.size))
         container.wantsLayer = true
