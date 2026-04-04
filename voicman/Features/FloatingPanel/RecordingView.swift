@@ -98,15 +98,34 @@ struct RecordingView: View {
             .padding(.vertical, 12)
 
             if viewModel.isExpanded {
-                TextEditor(text: $viewModel.partialText)
-                    .scrollContentBackground(.hidden)
-                    .background(Color.clear)
-                    .focused($isTextFieldFocused)
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 10)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(spacing: 0) {
+                            TextEditor(text: $viewModel.partialText)
+                                .scrollContentBackground(.hidden)
+                                .background(Color.clear)
+                                .focused($isTextFieldFocused)
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(.white.opacity(0.9))
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 10)
+                                // Yeterli alan açmak için minimum yükseklik:
+                                .frame(minHeight: 140, maxHeight: .infinity, alignment: .topLeading)
+                            
+                            Color.clear
+                                .frame(height: 1)
+                                .id("bottomAnchor")
+                        }
+                    }
+                    .onChange(of: viewModel.partialText) { oldValue, newValue in
+                        if viewModel.state == .recording {
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                proxy.scrollTo("bottomAnchor", anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .onChange(of: viewModel.isExpanded) { oldValue, expanded in
