@@ -1,2 +1,25 @@
-UserInterfaceState.xcuserstate
+# macOS
+.DS_Store
+
+# Xcode user-specific files
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+**/xcuserdata/
+
+# Xcode workspace state
+DerivedData/
+.build/
+
+# Local build artifacts
 build/
+
+# Signing and provisioning secrets
+*.p12
+*.mobileprovision
+*.provisionprofile
+
+# Local environment files
+.env
+.env.*
