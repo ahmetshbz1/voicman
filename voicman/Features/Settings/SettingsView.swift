@@ -6,6 +6,7 @@ struct SettingsView: View {
     @AppStorage("hotkeyKeyCode")   private var hotkeyKeyCode: Int = Int(kVK_Space)
     @AppStorage("hotkeyModifiers") private var hotkeyModifiers: Int = Int(optionKey)
     @AppStorage("autoPaste")       private var autoPaste: Bool = true
+    @AppStorage("autoCopyFinalText") private var autoCopyFinalText: Bool = true
     @AppStorage("locale")          private var locale: String = "tr-TR"
 
     @State private var recKeyCode: UInt32 = UInt32(kVK_Space)
@@ -95,6 +96,12 @@ struct SettingsView: View {
                     title: "Otomatik Yapıştır",
                     subtitle: "Transkripsiyon sonrası metni aktif uygulamaya yapıştır",
                     isOn: $autoPaste
+                )
+                Divider().padding(.leading, 16)
+                settingsToggle(
+                    title: "Final Metni Kopyala",
+                    subtitle: "Kayıt bittiğinde son metni panoya kopyala",
+                    isOn: $autoCopyFinalText
                 )
             }
             .background(Color.primary.opacity(0.04))

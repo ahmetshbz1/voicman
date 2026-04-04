@@ -12,7 +12,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var onboardingController: OnboardingWindowController?
     private var settingsController: SettingsWindowController?
     private var statusItem: NSStatusItem?
-    private var typeDebounce: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -136,7 +135,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         transcriptionEngine.startRecognition(locale: locale) { [weak self] text in
             self?.panelController.viewModel.partialText = text
-            self?.debouncedType(text)
         }
     }
 
@@ -161,7 +159,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func pauseRecording() {
-        typeDebounce?.cancel()
         audioEngine.stop()
         panelController.viewModel.transition(to: .paused)
     }
@@ -172,27 +169,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startAudioCapture()
     }
 
-    private func debouncedType(_ text: String) {
-        typeDebounce?.cancel()
-        typeDebounce = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(150))
-            guard !Task.isCancelled else { return }
-            self?.pasteboardService.typePartial(text: text)
-        }
-    }
-
     private func stopRecording() {
-        typeDebounce?.cancel()
         panelController.viewModel.transition(to: .transcribing)
         audioEngine.stop()
 
         let shouldPaste = UserDefaults.standard.object(forKey: "autoPaste") as? Bool ?? true
+        let shouldCopy = UserDefaults.standard.object(forKey: "autoCopyFinalText") as? Bool ?? true
 
         transcriptionEngine.finalize { [weak self] result in
             guard let self else { return }
             switch result {
             case .success(let text) where !text.isEmpty:
-                self.pasteboardService.endSession(finalText: text, shouldPaste: shouldPaste)
+                self.pasteboardService.endSession(finalText: text, shouldPaste: shouldPaste, shouldCopy: shouldCopy)
                 self.panelController.hideAfterDelay()
             case .success:
                 self.pasteboardService.cancelSession()
