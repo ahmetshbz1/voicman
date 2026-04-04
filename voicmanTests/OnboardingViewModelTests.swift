@@ -35,6 +35,24 @@ final class OnboardingViewModelTests: XCTestCase {
         XCTAssertEqual(sut.hotkeyDisplayString(), "⌥Space")
     }
 
+    func test_hotkeyDisplayString_rendersCombinedModifiersInExpectedOrder() {
+        UserDefaults.standard.set(Int(kVK_Tab), forKey: "hotkeyKeyCode")
+        UserDefaults.standard.set(Int(controlKey | optionKey | shiftKey | cmdKey), forKey: "hotkeyModifiers")
+
+        let sut = OnboardingViewModel()
+
+        XCTAssertEqual(sut.hotkeyDisplayString(), "⌃⌥⇧⌘⇥")
+    }
+
+    func test_hotkeyDisplayString_rendersUnknownKeyCodeWithFallbackLabel() {
+        UserDefaults.standard.set(99, forKey: "hotkeyKeyCode")
+        UserDefaults.standard.set(Int(optionKey), forKey: "hotkeyModifiers")
+
+        let sut = OnboardingViewModel()
+
+        XCTAssertEqual(sut.hotkeyDisplayString(), "⌥Key99")
+    }
+
     func test_next_advancesStep() {
         let sut = OnboardingViewModel()
 
