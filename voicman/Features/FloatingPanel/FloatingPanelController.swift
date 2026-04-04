@@ -2,6 +2,18 @@ import AppKit
 import SwiftUI
 import Combine
 
+@MainActor
+protocol FloatingPanelControlling: AnyObject {
+    var viewModel: RecordingViewModel { get }
+    var onButtonTapped: (() -> Void)? { get set }
+    var onSecondaryButtonTapped: (() -> Void)? { get set }
+    var onCloseTapped: (() -> Void)? { get set }
+
+    func show()
+    func hide()
+    func hideAfterDelay(_ seconds: Double)
+}
+
 private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
     override var isOpaque: Bool { false }
 }
@@ -75,7 +87,7 @@ private final class LongPressDraggablePanel: NSPanel {
 }
 
 @MainActor
-final class FloatingPanelController {
+final class FloatingPanelController: FloatingPanelControlling {
     private enum Constants {
         static let size = NSSize(width: 292, height: 66)
         static let cornerRadius: CGFloat = 33

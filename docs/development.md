@@ -47,7 +47,7 @@ When running from Xcode, add `--reset-onboarding` to the scheme arguments instea
 Current repository observations:
 
 - One app target: `voicman`
-- No separate test target is defined in the Xcode project
+- One test target is defined in the Xcode project: `voicmanTests`
 - No external package manager dependency is configured
 
 Before submitting changes, at minimum run the Debug build command and verify the app launches.
@@ -101,7 +101,7 @@ Xcode’dan çalıştırıyorsan `--reset-onboarding` argümanını scheme argum
 Repodaki mevcut gözlemler:
 
 - Tek uygulama target’ı: `voicman`
-- Xcode projesinde ayrı bir test target’ı tanımlı değil
+- Xcode projesinde bir test target’ı tanımlı: `voicmanTests`
 - Harici package manager bağımlılığı yapılandırılmamış
 
 Değişiklik göndermeden önce en azından Debug build komutunu çalıştır ve uygulamanın açıldığını doğrula.

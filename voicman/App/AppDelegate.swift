@@ -2,16 +2,65 @@ import AppKit
 import AVFoundation
 
 @MainActor
+protocol RecordingSettingsProviding {
+    var locale: String { get }
+    var shouldAutoPaste: Bool { get }
+    var shouldAutoCopyFinalText: Bool { get }
+}
+
+struct UserDefaultsRecordingSettingsProvider: RecordingSettingsProviding {
+    var locale: String {
+        UserDefaults.standard.string(forKey: "locale") ?? "tr-TR"
+    }
+
+    var shouldAutoPaste: Bool {
+        UserDefaults.standard.object(forKey: "autoPaste") as? Bool ?? true
+    }
+
+    var shouldAutoCopyFinalText: Bool {
+        UserDefaults.standard.object(forKey: "autoCopyFinalText") as? Bool ?? true
+    }
+}
+
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    private var hotkeyService: HotkeyService!
-    private var audioEngine: AudioEngine!
-    private var transcriptionEngine: SpeechTranscriptionEngine!
-    private var pasteboardService: PasteboardService!
-    private var panelController: FloatingPanelController!
+    private let settingsProvider: RecordingSettingsProviding
+    private var hotkeyService: HotkeyServiceProtocol
+    private var audioEngine: AudioEngineProtocol
+    private var transcriptionEngine: TranscriptionEngineProtocol
+    private var pasteboardService: PasteboardServiceProtocol
+    private var panelController: FloatingPanelControlling
     private var onboardingController: OnboardingWindowController?
     private var settingsController: SettingsWindowController?
     private var statusItem: NSStatusItem?
+
+    override init() {
+        hotkeyService = HotkeyService()
+        audioEngine = AudioEngine()
+        transcriptionEngine = SpeechTranscriptionEngine()
+        pasteboardService = PasteboardService()
+        panelController = FloatingPanelController()
+        settingsProvider = UserDefaultsRecordingSettingsProvider()
+        super.init()
+    }
+
+    init(
+        hotkeyService: HotkeyServiceProtocol,
+        audioEngine: AudioEngineProtocol,
+        transcriptionEngine: TranscriptionEngineProtocol,
+        pasteboardService: PasteboardServiceProtocol,
+        panelController: FloatingPanelControlling,
+        settingsProvider: RecordingSettingsProviding
+    ) {
+        self.hotkeyService = hotkeyService
+        self.audioEngine = audioEngine
+        self.transcriptionEngine = transcriptionEngine
+        self.pasteboardService = pasteboardService
+        self.panelController = panelController
+        self.settingsProvider = settingsProvider
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -30,8 +79,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        hotkeyService?.unregister()
-        audioEngine?.stop()
+        hotkeyService.unregister()
+        audioEngine.stop()
     }
 
     // MARK: - Onboarding
@@ -58,12 +107,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func bootstrapServices() {
-        pasteboardService = PasteboardService()
-        transcriptionEngine = SpeechTranscriptionEngine()
-        audioEngine = AudioEngine()
-        panelController = FloatingPanelController()
-        hotkeyService = HotkeyService()
-
         panelController.onButtonTapped = { [weak self] in
             self?.togglePause()
         }
@@ -104,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Hotkey
 
-    private func bindHotkeyToRecording() {
+    func bindHotkeyToRecording() {
         hotkeyService.onHotkeyDown = { [weak self] in
             guard let self else { return }
             switch self.panelController.viewModel.state {
@@ -120,7 +163,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         hotkeyService.onHotkeyUp = { [weak self] holdDuration in
             guard let self else { return }
-            if holdDuration > 0.5 {
+            let state = self.panelController.viewModel.state
+            if holdDuration > 0.5 && (state == .recording || state == .paused) {
                 self.stopRecording()
             }
         }
@@ -144,9 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Kayıt Akışı
 
-    private func startRecording() {
-        let locale = UserDefaults.standard.string(forKey: "locale") ?? "tr-TR"
-
+    func startRecording() {
         pasteboardService.beginSession()
         panelController.show()
         panelController.viewModel.transition(to: .recording)
@@ -154,7 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyService.registerEscapeHotkey()
         startAudioCapture()
 
-        transcriptionEngine.startRecognition(locale: locale) { [weak self] text in
+        transcriptionEngine.startRecognition(locale: settingsProvider.locale) { [weak self] text in
             self?.panelController.viewModel.updateTextFromEngine(text)
         }
     }
@@ -168,7 +210,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func togglePause() {
+    func togglePause() {
         switch panelController.viewModel.state {
         case .recording:
             pauseRecording()
@@ -179,18 +221,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func pauseRecording() {
+    func pauseRecording() {
         audioEngine.stop()
         panelController.viewModel.transition(to: .paused)
     }
 
-    private func resumeRecording() {
+    func resumeRecording() {
         panelController.show()
         panelController.viewModel.transition(to: .recording)
         startAudioCapture()
     }
 
-    private func stopRecording() {
+    func stopRecording() {
         let isUserEdited = panelController.viewModel.isUserEdited
         let userEditedText = panelController.viewModel.partialText
 
@@ -199,8 +241,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyService.unregisterEnterHotkey()
         hotkeyService.unregisterEscapeHotkey()
 
-        let shouldPaste = UserDefaults.standard.object(forKey: "autoPaste") as? Bool ?? true
-        let shouldCopy = UserDefaults.standard.object(forKey: "autoCopyFinalText") as? Bool ?? true
+        let shouldPaste = settingsProvider.shouldAutoPaste
+        let shouldCopy = settingsProvider.shouldAutoCopyFinalText
 
         transcriptionEngine.finalize { [weak self] result in
             guard let self else { return }
@@ -224,7 +266,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             if !finalText.isEmpty {
                 self.pasteboardService.endSession(finalText: finalText, shouldPaste: shouldPaste, shouldCopy: shouldCopy)
-                self.panelController.hideAfterDelay()
+                self.panelController.hideAfterDelay(1.5)
             } else {
                 self.pasteboardService.cancelSession()
                 self.panelController.hide()
@@ -232,7 +274,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func cancelRecording() {
+    func cancelRecording() {
         audioEngine.stop()
         hotkeyService.unregisterEnterHotkey()
         hotkeyService.unregisterEscapeHotkey()
