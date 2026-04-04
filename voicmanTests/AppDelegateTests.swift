@@ -143,6 +143,29 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertNotNil(transcriptionEngine.finalizeCompletion)
     }
 
+    func test_bindHotkeyToRecording_whenRecording_hotkeyDownStopsRecordingFlow() {
+        let hotkeyService = MockHotkeyService()
+        let audioEngine = MockAudioEngine()
+        let transcriptionEngine = MockTranscriptionEngine()
+        let panelController = MockFloatingPanelController()
+        let sut = AppDelegate(
+            hotkeyService: hotkeyService,
+            audioEngine: audioEngine,
+            transcriptionEngine: transcriptionEngine,
+            pasteboardService: MockPasteboardService(),
+            panelController: panelController,
+            settingsProvider: StubRecordingSettingsProvider(locale: "en-US", shouldAutoPaste: true, shouldAutoCopyFinalText: true)
+        )
+        panelController.viewModel.transition(to: .recording)
+        sut.bindHotkeyToRecording()
+
+        hotkeyService.onHotkeyDown?()
+
+        XCTAssertEqual(panelController.viewModel.state, .transcribing)
+        XCTAssertEqual(audioEngine.stopCallCount, 1)
+        XCTAssertNotNil(transcriptionEngine.finalizeCompletion)
+    }
+
     func test_bindHotkeyToRecording_whenTranscribing_escapeCancelsRecording() {
         let hotkeyService = MockHotkeyService()
         let transcriptionEngine = MockTranscriptionEngine()
@@ -191,6 +214,44 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(hotkeyService.registerEscapeHotkeyCallCount, 1)
         XCTAssertEqual(transcriptionEngine.startRecognitionLocales, ["en-US"])
         XCTAssertEqual(audioEngine.startCaptureCallCount, 1)
+    }
+
+    func test_startRecording_partialResultUpdatesPanelText() {
+        let transcriptionEngine = MockTranscriptionEngine()
+        let panelController = MockFloatingPanelController()
+        let sut = AppDelegate(
+            hotkeyService: MockHotkeyService(),
+            audioEngine: MockAudioEngine(),
+            transcriptionEngine: transcriptionEngine,
+            pasteboardService: MockPasteboardService(),
+            panelController: panelController,
+            settingsProvider: StubRecordingSettingsProvider(locale: "en-US", shouldAutoPaste: true, shouldAutoCopyFinalText: true)
+        )
+
+        sut.startRecording()
+        transcriptionEngine.partialResultHandler?("merhaba")
+
+        XCTAssertEqual(panelController.viewModel.partialText, "merhaba")
+    }
+
+    func test_startRecording_partialResultDoesNotOverwriteUserEditedText() {
+        let transcriptionEngine = MockTranscriptionEngine()
+        let panelController = MockFloatingPanelController()
+        let sut = AppDelegate(
+            hotkeyService: MockHotkeyService(),
+            audioEngine: MockAudioEngine(),
+            transcriptionEngine: transcriptionEngine,
+            pasteboardService: MockPasteboardService(),
+            panelController: panelController,
+            settingsProvider: StubRecordingSettingsProvider(locale: "en-US", shouldAutoPaste: true, shouldAutoCopyFinalText: true)
+        )
+
+        sut.startRecording()
+        panelController.viewModel.partialText = "manuel"
+        panelController.viewModel.isUserEdited = true
+        transcriptionEngine.partialResultHandler?("engine")
+
+        XCTAssertEqual(panelController.viewModel.partialText, "manuel")
     }
 
     func test_stopRecording_withSuccessfulFinalization_endsPasteboardSessionAndSchedulesHide() {

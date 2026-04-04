@@ -96,4 +96,18 @@ final class HotkeyServiceTests: XCTestCase {
         wait(for: [expectation], timeout: 0.1)
         XCTAssertEqual(receivedDuration, 0)
     }
+
+    func test_handleRegisteredHotKey_allowsSecondPressAfterRelease() {
+        let sut = HotkeyService()
+        var downCallCount = 0
+        sut.onHotkeyDown = {
+            downCallCount += 1
+        }
+
+        sut.handleRegisteredHotKey(id: .main, kind: UInt32(kEventHotKeyPressed))
+        sut.handleRegisteredHotKey(id: .main, kind: UInt32(kEventHotKeyReleased))
+        sut.handleRegisteredHotKey(id: .main, kind: UInt32(kEventHotKeyPressed))
+
+        XCTAssertEqual(downCallCount, 2)
+    }
 }
