@@ -71,9 +71,6 @@ final class FloatingPanelController {
         hideTask?.cancel()
         hideTask = nil
         panel?.orderFrontRegardless()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.performSubtleHaptic()
-        }
     }
 
     func hide() {
@@ -154,6 +151,10 @@ final class FloatingPanelController {
         let x = screenFrame.midX - panelSize.width / 2
         let y = screenFrame.minY + 28
         panel.setFrameOrigin(NSPoint(x: x, y: y))
+    }
+
+    func performOpenHaptic() {
+        performSubtleHaptic()
     }
 
     private func performSubtleHaptic() {

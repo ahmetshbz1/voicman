@@ -111,7 +111,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         hotkeyService.onHotkeyUp = { [weak self] holdDuration in
             guard let self else { return }
-            if holdDuration > 0.5 { self.stopRecording() }
+            if holdDuration > 0.5 {
+                self.stopRecording()
+            } else if case .recording = self.panelController.viewModel.state {
+                self.panelController.performOpenHaptic()
+            }
         }
     }
 
