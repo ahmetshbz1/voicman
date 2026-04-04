@@ -66,6 +66,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyService = HotkeyService()
 
         panelController.onButtonTapped = { [weak self] in
+            self?.togglePause()
+        }
+        panelController.onSecondaryButtonTapped = { [weak self] in
             self?.stopRecording()
         }
 
@@ -103,8 +106,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyService.onHotkeyDown = { [weak self] in
             guard let self else { return }
             switch self.panelController.viewModel.state {
-            case .idle:      self.startRecording()
-            case .recording: self.stopRecording()
+            case .idle:
+                self.startRecording()
+            case .recording:
+                self.stopRecording()
+            case .paused:
+                self.resumeRecording()
             default:         break
             }
         }
@@ -113,8 +120,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             if holdDuration > 0.5 {
                 self.stopRecording()
-            } else if case .recording = self.panelController.viewModel.state {
-                self.panelController.performOpenHaptic()
             }
         }
     }
@@ -127,18 +132,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pasteboardService.beginSession()
         panelController.show()
         panelController.viewModel.transition(to: .recording)
+        startAudioCapture()
 
+        transcriptionEngine.startRecognition(locale: locale) { [weak self] text in
+            self?.panelController.viewModel.partialText = text
+            self?.debouncedType(text)
+        }
+    }
+
+    private func startAudioCapture() {
         audioEngine.startCapture { @MainActor [weak self] buffer, _ in
             self?.transcriptionEngine.appendBuffer(buffer)
             self?.panelController.viewModel.audioLevel = Self.rms(buffer)
         } onError: { @MainActor [weak self] error in
             self?.handleError(error)
         }
+    }
 
-        transcriptionEngine.startRecognition(locale: locale) { [weak self] text in
-            self?.panelController.viewModel.partialText = text
-            self?.debouncedType(text)
+    private func togglePause() {
+        switch panelController.viewModel.state {
+        case .recording:
+            pauseRecording()
+        case .paused:
+            resumeRecording()
+        default:
+            break
         }
+    }
+
+    private func pauseRecording() {
+        typeDebounce?.cancel()
+        audioEngine.stop()
+        panelController.viewModel.transition(to: .paused)
+    }
+
+    private func resumeRecording() {
+        panelController.show()
+        panelController.viewModel.transition(to: .recording)
+        startAudioCapture()
     }
 
     private func debouncedType(_ text: String) {
@@ -162,17 +193,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             switch result {
             case .success(let text) where !text.isEmpty:
                 self.pasteboardService.endSession(finalText: text, shouldPaste: shouldPaste)
-                self.panelController.viewModel.transition(to: .idle)
                 self.panelController.hideAfterDelay()
             case .success:
                 self.pasteboardService.cancelSession()
-                self.panelController.viewModel.transition(to: .idle)
                 self.panelController.hide()
             case .failure(let error):
                 let msg = error.localizedDescription
                 if msg.contains("No speech detected") || msg.contains("cancelled") {
                     self.pasteboardService.cancelSession()
-                    self.panelController.viewModel.transition(to: .idle)
                     self.panelController.hide()
                 } else {
                     self.pasteboardService.cancelSession()
@@ -195,7 +223,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panelController.viewModel.transition(to: .error(error.localizedDescription))
         Task {
             try? await Task.sleep(for: .seconds(2))
-            panelController.viewModel.transition(to: .idle)
             panelController.hide()
         }
     }

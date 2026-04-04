@@ -7,6 +7,7 @@ final class RecordingViewModel: ObservableObject {
     enum State: Equatable {
         case idle
         case recording
+        case paused
         case transcribing
         case error(String)
     }
@@ -18,12 +19,16 @@ final class RecordingViewModel: ObservableObject {
     @Published var partialText: String = ""
 
     func transition(to newState: State) {
+        let previousState = state
         state = newState
         if newState != .idle {
             isVisible = true
         }
-        if newState == .recording {
+        if newState == .recording && previousState == .idle {
             partialText = ""
+        }
+        if newState == .paused {
+            audioLevel = 0
         }
     }
 

@@ -60,6 +60,7 @@ final class FloatingPanelController {
 
     let viewModel = RecordingViewModel()
     var onButtonTapped: (() -> Void)?
+    var onSecondaryButtonTapped: (() -> Void)?
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
 
@@ -74,7 +75,6 @@ final class FloatingPanelController {
     }
 
     func hide() {
-        performSubtleHaptic()
         panel?.orderOut(nil)
         viewModel.hide()
     }
@@ -91,9 +91,11 @@ final class FloatingPanelController {
     // MARK: - Panel Kurulumu
 
     private func setupPanel() {
-        let rootView = RecordingView(viewModel: viewModel) { [weak self] in
-            self?.onButtonTapped?()
-        }
+        let rootView = RecordingView(
+            viewModel: viewModel,
+            onTap: { [weak self] in self?.onButtonTapped?() },
+            onSecondaryTap: { [weak self] in self?.onSecondaryButtonTapped?() }
+        )
 
         let panel = LongPressDraggablePanel(
             contentRect: NSRect(origin: .zero, size: Constants.size),
@@ -112,7 +114,6 @@ final class FloatingPanelController {
         panel.isMovableByWindowBackground = false
         panel.onLongPress = { [weak self] in
             self?.viewModel.isDragging = true
-            NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
         }
         panel.onDragEnded = { [weak self] in
             self?.viewModel.isDragging = false
@@ -151,13 +152,5 @@ final class FloatingPanelController {
         let x = screenFrame.midX - panelSize.width / 2
         let y = screenFrame.minY + 28
         panel.setFrameOrigin(NSPoint(x: x, y: y))
-    }
-
-    func performOpenHaptic() {
-        performSubtleHaptic()
-    }
-
-    private func performSubtleHaptic() {
-        NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .default)
     }
 }

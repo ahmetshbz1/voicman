@@ -4,6 +4,7 @@ import Combine
 struct RecordingView: View {
     @ObservedObject var viewModel: RecordingViewModel
     var onTap: (() -> Void)?
+    var onSecondaryTap: (() -> Void)?
 
     var body: some View {
         panelContent
@@ -14,7 +15,7 @@ struct RecordingView: View {
         Group {
             switch viewModel.state {
             case .idle:         idlePanel
-            case .recording:    recordingPanel
+            case .recording, .paused: activePanel
             case .transcribing: transcribingPanel
             case .error:        errorPanel
             }
@@ -33,38 +34,65 @@ struct RecordingView: View {
         .panelChrome()
     }
 
-    private var recordingPanel: some View {
+    private var activePanel: some View {
         HStack(spacing: 0) {
             Button { onTap?() } label: {
                 ZStack {
                     Circle()
                         .fill(.white.opacity(0.1))
                         .frame(width: 30, height: 30)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(.white)
-                        .frame(width: 10, height: 10)
+                    Image(systemName: viewModel.state == .paused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .contentTransition(.symbolEffect(.replace))
                 }
             }
             .buttonStyle(TapStyle())
             .padding(.leading, 12)
 
-            // Canlı dalga
-            AudioWave(level: viewModel.audioLevel)
+            AudioWave(level: viewModel.state == .paused ? 0 : viewModel.audioLevel)
                 .frame(width: 44, height: 22)
                 .padding(.leading, 10)
 
-            // Partial text
-            Text(viewModel.partialText.isEmpty ? "Dinliyor..." : viewModel.partialText)
+            Text(statusText)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(viewModel.partialText.isEmpty ? 0.35 : 0.85))
+                .foregroundStyle(.white.opacity(statusOpacity))
                 .lineLimit(1)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 8)
                 .padding(.trailing, 16)
                 .animation(.easeOut(duration: 0.1), value: viewModel.partialText)
+                .animation(.easeOut(duration: 0.15), value: viewModel.state)
+
+            if viewModel.state == .paused {
+                Button { onSecondaryTap?() } label: {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(.white.opacity(0.08)))
+                }
+                .buttonStyle(TapStyle())
+                .padding(.trailing, 12)
+                .transition(.scale.combined(with: .opacity))
+            }
         }
         .panelChrome()
+    }
+
+    private var statusText: String {
+        if viewModel.state == .paused {
+            return viewModel.partialText.isEmpty ? "Duraklatıldı" : viewModel.partialText
+        }
+        return viewModel.partialText.isEmpty ? "Dinliyor..." : viewModel.partialText
+    }
+
+    private var statusOpacity: Double {
+        if viewModel.state == .paused && viewModel.partialText.isEmpty {
+            return 0.5
+        }
+        return viewModel.partialText.isEmpty ? 0.35 : 0.85
     }
 
     private var transcribingPanel: some View {
@@ -118,30 +146,30 @@ private struct AudioWave: View {
     private let timer = Timer.publish(every: 1.0 / 30.0, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        Canvas { ctx, size in
-            let lev = CGFloat(max(level, 0.05))
-            let midY = size.height / 2
-            let amp = size.height * 0.4 * lev
-
-            var path = Path()
-            let steps = Int(size.width)
-            for x in 0...steps {
-                let xf = CGFloat(x)
-                let norm = xf / size.width
-                let envelope = sin(norm * Double.pi)
-                let y = midY + sin(phase + norm * 4 * Double.pi) * amp * envelope
-                if x == 0 { path.move(to: CGPoint(x: xf, y: y)) }
-                else { path.addLine(to: CGPoint(x: xf, y: y)) }
+        HStack(spacing: 3) {
+            ForEach(0..<5, id: \.self) { index in
+                Capsule()
+                    .fill(barGradient(for: index))
+                    .frame(width: 4, height: barHeight(for: index))
             }
-
-            ctx.stroke(path, with: .linearGradient(
-                Gradient(colors: [.red.opacity(0.8), .orange.opacity(0.5)]),
-                startPoint: CGPoint(x: 0, y: midY),
-                endPoint: CGPoint(x: size.width, y: midY)
-            ), lineWidth: 2)
         }
+        .frame(height: 22)
         .onReceive(timer) { _ in phase += 0.15 }
         .onDisappear { timer.upstream.connect().cancel() }
+    }
+
+    private func barHeight(for index: Int) -> CGFloat {
+        let normalizedLevel = CGFloat(max(level, 0.06))
+        let wave = (sin(phase + Double(index) * 0.9) + 1) / 2
+        let base = CGFloat(8 + index % 2)
+        return min(max(base + normalizedLevel * 12 * wave, 7), 22)
+    }
+
+    private func barGradient(for index: Int) -> LinearGradient {
+        let colors: [Color] = index.isMultiple(of: 2)
+            ? [.red.opacity(0.9), .orange.opacity(0.65)]
+            : [.pink.opacity(0.85), .orange.opacity(0.5)]
+        return LinearGradient(colors: colors, startPoint: .bottom, endPoint: .top)
     }
 }
 
