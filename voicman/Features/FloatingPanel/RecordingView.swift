@@ -62,10 +62,6 @@ struct RecordingView: View {
                 if viewModel.isExpanded {
                     Spacer()
                         .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                        .onTapGesture(count: 2) {
-                            viewModel.isExpanded = false
-                        }
                 } else {
                     Text(statusText)
                         .font(.system(size: 12, weight: .medium))
@@ -103,9 +99,7 @@ struct RecordingView: View {
             .padding(.vertical, 12)
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
-                if viewModel.isExpanded {
-                    viewModel.isExpanded = false
-                }
+                viewModel.isExpanded.toggle()
             }
 
             if viewModel.isExpanded {
