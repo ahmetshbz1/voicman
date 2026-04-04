@@ -1,6 +1,5 @@
 import AVFoundation
 import Speech
-import os.log
 
 /// Apple SFSpeechRecognizer tabanlı, cihaz üzerinde çalışan transkripsiyon motoru.
 /// Türkçe (tr-TR) desteği ile M-serisi Neural Engine üzerinde çalışır.
@@ -12,8 +11,6 @@ final class SpeechTranscriptionEngine: TranscriptionEngineProtocol {
     private var recognitionTask: SFSpeechRecognitionTask?
     private var finalCompletion: ((Result<String, Error>) -> Void)?
     private var lastPartialResult: String = ""
-
-    private let log = Logger(subsystem: "com.ahmetshbz.voicman", category: "TranscriptionEngine")
 
     func requestAuthorization(completion: @MainActor @escaping (Bool) -> Void) {
         SFSpeechRecognizer.requestAuthorization { status in
@@ -27,10 +24,7 @@ final class SpeechTranscriptionEngine: TranscriptionEngineProtocol {
         let recognizerLocale = Locale(identifier: locale)
         recognizer = SFSpeechRecognizer(locale: recognizerLocale)
 
-        guard let recognizer, recognizer.isAvailable else {
-            log.warning("SFSpeechRecognizer '\(locale)' için hazır değil.")
-            return
-        }
+        guard let recognizer, recognizer.isAvailable else { return }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -62,14 +56,11 @@ final class SpeechTranscriptionEngine: TranscriptionEngineProtocol {
                     if nsError.domain == "kAFAssistantErrorDomain" && (code == 301 || code == 203) {
                         self.deliverFinalResult(.success(self.lastPartialResult))
                     } else {
-                        self.log.error("Transkripsiyon hatası (\(code)): \(error.localizedDescription)")
                         self.deliverFinalResult(.failure(error))
                     }
                 }
             }
         }
-
-        log.info("Transkripsiyon başladı (\(locale)).")
     }
 
     func appendBuffer(_ buffer: AVAudioPCMBuffer) {

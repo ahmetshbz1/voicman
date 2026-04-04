@@ -1,6 +1,5 @@
 import AppKit
 import Carbon.HIToolbox
-import os.log
 
 @MainActor
 final class HotkeyService: HotkeyServiceProtocol {
@@ -11,8 +10,6 @@ final class HotkeyService: HotkeyServiceProtocol {
     private var hotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var keyDownTime: Date?
-
-    private let log = Logger(subsystem: "com.ahmetshbz.voicman", category: "HotkeyService")
 
     init() { register() }
 
@@ -41,10 +38,7 @@ final class HotkeyService: HotkeyServiceProtocol {
             &hotKeyRef
         )
 
-        guard status == noErr else {
-            log.error("Hotkey kaydedilemedi: \(status)")
-            return
-        }
+        guard status == noErr else { return }
 
         let selfPointer = Unmanaged.passUnretained(self).toOpaque()
 
@@ -66,8 +60,6 @@ final class HotkeyService: HotkeyServiceProtocol {
             selfPointer,
             &eventHandlerRef
         )
-
-        log.info("Hotkey kaydedildi — keyCode: \(keyCode), modifiers: \(modifiers)")
     }
 
     // MARK: - Olay

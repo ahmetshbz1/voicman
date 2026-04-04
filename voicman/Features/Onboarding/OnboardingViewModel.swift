@@ -4,7 +4,6 @@ import AppKit
 import SwiftUI
 import Combine
 import Carbon.HIToolbox
-import os.log
 
 enum OnboardingStep: Int, CaseIterable {
     case welcome
@@ -28,7 +27,6 @@ final class OnboardingViewModel: ObservableObject {
     @Published var hotkeyKeyCode: UInt32 = UInt32(kVK_Space)
     @Published var hotkeyModifiers: UInt32 = UInt32(optionKey)
 
-    private let log = Logger(subsystem: "com.ahmetshbz.voicman", category: "Onboarding")
     var onComplete: (() -> Void)?
 
     /// TCC diyalogu görünmeden önce window'u arkaya al
@@ -51,23 +49,17 @@ final class OnboardingViewModel: ObservableObject {
 
     func requestMicrophone() {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
-        log.info("requestMicrophone çağrıldı — status: \(status.rawValue)")
 
         if status == .denied || status == .restricted {
-            log.info("Mikrofon izni reddedilmiş/kısıtlı, Sistem Ayarları açılıyor")
             openSystemSettings(url: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")
             return
         }
 
         isRequesting = true
-        let hasWillShow = onWillShowPermissionDialog != nil
-        log.info("onWillShowPermissionDialog bağlı mı: \(hasWillShow)")
         onWillShowPermissionDialog?()
-        log.info("Window orderBack çağrıldı, TCC diyalogu bekleniyor")
 
         AVAudioApplication.requestRecordPermission { granted in
             Task { @MainActor in
-                self.log.info("requestRecordPermission sonucu: \(granted)")
                 self.micGranted   = granted
                 self.isRequesting = false
                 self.onDidFinishPermissionDialog?()

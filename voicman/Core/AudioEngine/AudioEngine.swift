@@ -1,11 +1,9 @@
 import AVFoundation
-import os.log
 
 @MainActor
 final class AudioEngine: AudioEngineProtocol {
 
     private let engine = AVAudioEngine()
-    private let log = Logger(subsystem: "com.ahmetshbz.voicman", category: "AudioEngine")
     private var isRunning = false
 
     func startCapture(
@@ -28,10 +26,8 @@ final class AudioEngine: AudioEngineProtocol {
             engine.prepare()
             try engine.start()
             isRunning = true
-            log.info("Ses yakalama başladı.")
         } catch {
             inputNode.removeTap(onBus: 0)
-            log.error("AVAudioEngine başlatılamadı: \(error.localizedDescription)")
             Task { @MainActor in onError(error) }
         }
     }
@@ -41,6 +37,5 @@ final class AudioEngine: AudioEngineProtocol {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         isRunning = false
-        log.info("Ses yakalama durduruldu.")
     }
 }

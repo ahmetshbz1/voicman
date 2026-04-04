@@ -1,32 +1,21 @@
 import SwiftUI
 import Combine
-import AppKit
-
-// MARK: - Ana View
 
 struct RecordingView: View {
-
     @ObservedObject var viewModel: RecordingViewModel
     var onTap: (() -> Void)?
 
     var body: some View {
-        ZStack {
-            // NSViewRepresentable ile tüm NSHostingView katmanlarını şeffaf yap
-            ClearWindowBackground()
-
-            Group {
-                switch viewModel.state {
-                case .idle:         idlePanel
-                case .recording:    recordingPanel
-                case .transcribing: transcribingPanel
-                case .error:        errorPanel
-                }
+        Group {
+            switch viewModel.state {
+            case .idle:         idlePanel
+            case .recording:    recordingPanel
+            case .transcribing: transcribingPanel
+            case .error:        errorPanel
             }
         }
-        .frame(width: 300, height: 80)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-
-    // MARK: - Idle
 
     private var idlePanel: some View {
         HStack(spacing: 8) {
@@ -37,14 +26,11 @@ struct RecordingView: View {
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.25))
         }
-        .pill(glow: .white)
+        .panelChrome()
     }
-
-    // MARK: - Kayıt
 
     private var recordingPanel: some View {
         HStack(spacing: 0) {
-            // Stop butonu
             Button { onTap?() } label: {
                 ZStack {
                     Circle()
@@ -74,10 +60,8 @@ struct RecordingView: View {
                 .padding(.trailing, 16)
                 .animation(.easeOut(duration: 0.1), value: viewModel.partialText)
         }
-        .pill(glow: .red)
+        .panelChrome()
     }
-
-    // MARK: - Transkripsiyon
 
     private var transcribingPanel: some View {
         HStack(spacing: 10) {
@@ -86,10 +70,8 @@ struct RecordingView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.55))
         }
-        .pill(glow: .cyan)
+        .panelChrome()
     }
-
-    // MARK: - Hata
 
     private var errorPanel: some View {
         HStack(spacing: 8) {
@@ -99,37 +81,23 @@ struct RecordingView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
         }
-        .pill(glow: .orange)
+        .panelChrome()
     }
 }
 
-// MARK: - Pill Modifier
-
-private struct PillModifier: ViewModifier {
-    let glow: Color
-
+private struct PanelChrome: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 18)
             .padding(.vertical, 12)
-            .background(
-                Capsule().fill(Color(white: 0.11))
-            )
-            .overlay(
-                Capsule().strokeBorder(.white.opacity(0.07), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.7), radius: 20, y: 8)
-            .shadow(color: glow.opacity(0.1), radius: 8, y: 2)
     }
 }
 
 private extension View {
-    func pill(glow: Color) -> some View {
-        modifier(PillModifier(glow: glow))
+    func panelChrome() -> some View {
+        modifier(PanelChrome())
     }
 }
-
-// MARK: - Buton Stili
 
 private struct TapStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
@@ -139,10 +107,7 @@ private struct TapStyle: ButtonStyle {
     }
 }
 
-// MARK: - Ses Dalgası (sinüs çizgi)
-
 private struct AudioWave: View {
-
     var level: Float
 
     @State private var phase: Double = 0
@@ -159,7 +124,6 @@ private struct AudioWave: View {
             for x in 0...steps {
                 let xf = CGFloat(x)
                 let norm = xf / size.width
-                // Kenarlar sıfıra yaklaşsın
                 let envelope = sin(norm * Double.pi)
                 let y = midY + sin(phase + norm * 4 * Double.pi) * amp * envelope
                 if x == 0 { path.move(to: CGPoint(x: xf, y: y)) }
@@ -177,10 +141,7 @@ private struct AudioWave: View {
     }
 }
 
-// MARK: - Typing Indicator
-
 private struct TypingIndicator: View {
-
     @State private var active = 0
     private let timer = Timer.publish(every: 0.35, on: .main, in: .common).autoconnect()
 
@@ -196,36 +157,5 @@ private struct TypingIndicator: View {
         }
         .onReceive(timer) { _ in active = (active + 1) % 3 }
         .onDisappear { timer.upstream.connect().cancel() }
-    }
-}
-
-// MARK: - NSHostingView Şeffaflık Fix
-
-/// SwiftUI her güncelleme döngüsünde NSHostingView'ın arka plan katmanlarını
-/// tekrar opak yapıyor. Bu NSViewRepresentable her updateNSView çağrısında
-/// tüm katman hiyerarşisini şeffaf yapmaya zorlar.
-private struct ClearWindowBackground: NSViewRepresentable {
-
-    func makeNSView(context: Context) -> NSView {
-        let v = NSView()
-        v.wantsLayer = true
-        v.layer?.backgroundColor = .clear
-        return v
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            guard let root = nsView.window?.contentView else { return }
-            Self.forceClear(root)
-        }
-    }
-
-    private static func forceClear(_ view: NSView) {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = .clear
-        view.layer?.isOpaque = false
-        for sub in view.subviews {
-            forceClear(sub)
-        }
     }
 }

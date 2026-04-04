@@ -1,8 +1,16 @@
 import AppKit
 import SwiftUI
 
+private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
+    override var isOpaque: Bool { false }
+}
+
 @MainActor
 final class FloatingPanelController {
+    private enum Constants {
+        static let size = NSSize(width: 320, height: 74)
+        static let cornerRadius: CGFloat = 37
+    }
 
     let viewModel = RecordingViewModel()
     var onButtonTapped: (() -> Void)?
@@ -41,8 +49,8 @@ final class FloatingPanelController {
         }
 
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 80),
-            styleMask: [.nonactivatingPanel, .borderless, .fullSizeContentView],
+            contentRect: NSRect(origin: .zero, size: Constants.size),
+            styleMask: [.nonactivatingPanel, .borderless],
             backing: .buffered,
             defer: false
         )
@@ -56,31 +64,30 @@ final class FloatingPanelController {
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = false
 
-        let hosting = NSHostingView(rootView: rootView)
-        hosting.wantsLayer = true
-        panel.contentView = hosting
+        let container = NSView(frame: NSRect(origin: .zero, size: Constants.size))
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor(white: 0.11, alpha: 1).cgColor
+        container.layer?.cornerRadius = Constants.cornerRadius
+        container.layer?.masksToBounds = true
+        container.layer?.borderWidth = 0.5
+        container.layer?.borderColor = NSColor.white.withAlphaComponent(0.07).cgColor
 
-        // Tüm katmanları şeffaf yap
-        Self.clearAllLayers(hosting)
+        let hosting = TransparentHostingView(rootView: rootView)
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        hosting.wantsLayer = true
+        hosting.layer?.backgroundColor = NSColor.clear.cgColor
+        hosting.layer?.isOpaque = false
+        container.addSubview(hosting)
+        NSLayoutConstraint.activate([
+            hosting.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            hosting.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: container.topAnchor),
+            hosting.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+        panel.contentView = container
 
         positionAtBottomCenter(panel)
         self.panel = panel
-
-        // Layout sonrası tekrar temizle
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            if let hosting = self?.panel?.contentView {
-                Self.clearAllLayers(hosting)
-            }
-        }
-    }
-
-    private static func clearAllLayers(_ view: NSView) {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = .clear
-        view.layer?.isOpaque = false
-        for sub in view.subviews {
-            clearAllLayers(sub)
-        }
     }
 
     private func positionAtBottomCenter(_ panel: NSPanel) {

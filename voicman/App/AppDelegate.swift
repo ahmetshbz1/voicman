@@ -1,6 +1,5 @@
 import AppKit
 import AVFoundation
-import os.log
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -15,8 +14,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var typeDebounce: Task<Void, Never>?
 
-    private let log = Logger(subsystem: "com.ahmetshbz.voicman", category: "AppDelegate")
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
 
@@ -25,7 +22,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let completed = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        log.info("hasCompletedOnboarding = \(completed), bundleID = \(Bundle.main.bundleIdentifier ?? "nil")")
 
         if completed {
             launchMainApp()
@@ -60,7 +56,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bootstrapServices()
         setupStatusBar()
         bindHotkeyToRecording()
-        log.info("Voicman başlatıldı.")
     }
 
     private func bootstrapServices() {
@@ -74,9 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.stopRecording()
         }
 
-        transcriptionEngine.requestAuthorization { [weak self] granted in
-            if !granted { self?.log.warning("Konuşma tanıma izni verilmedi.") }
-        }
+        transcriptionEngine.requestAuthorization { _ in }
     }
 
     // MARK: - Status Bar
@@ -144,7 +137,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// Partial text'i debounce ile aktif input'a yaz — çok sık çağrılmasını önler
     private func debouncedType(_ text: String) {
         typeDebounce?.cancel()
         typeDebounce = Task { [weak self] in
@@ -175,7 +167,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .failure(let error):
                 let msg = error.localizedDescription
                 if msg.contains("No speech detected") || msg.contains("cancelled") {
-                    self.log.info("Ses algılanamadı — sessizce kapatılıyor.")
                     self.pasteboardService.cancelSession()
                     self.panelController.viewModel.transition(to: .idle)
                     self.panelController.hide()
@@ -197,7 +188,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleError(_ error: Error) {
-        log.error("Hata: \(error.localizedDescription)")
         panelController.viewModel.transition(to: .error(error.localizedDescription))
         Task {
             try? await Task.sleep(for: .seconds(2))
