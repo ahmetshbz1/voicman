@@ -8,8 +8,8 @@ private final class TransparentHostingView<Content: View>: NSHostingView<Content
 @MainActor
 final class FloatingPanelController {
     private enum Constants {
-        static let size = NSSize(width: 320, height: 74)
-        static let cornerRadius: CGFloat = 37
+        static let size = NSSize(width: 292, height: 66)
+        static let cornerRadius: CGFloat = 33
     }
 
     let viewModel = RecordingViewModel()
