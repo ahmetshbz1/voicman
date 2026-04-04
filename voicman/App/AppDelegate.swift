@@ -137,7 +137,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startAudioCapture()
 
         transcriptionEngine.startRecognition(locale: locale) { [weak self] text in
-            self?.panelController.viewModel.partialText = text
+            self?.panelController.viewModel.updateTextFromEngine(text)
         }
     }
 
@@ -173,6 +173,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopRecording() {
+        let isUserEdited = panelController.viewModel.isUserEdited
+        let userEditedText = panelController.viewModel.partialText
+
         panelController.viewModel.transition(to: .transcribing)
         audioEngine.stop()
 
@@ -181,22 +184,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         transcriptionEngine.finalize { [weak self] result in
             guard let self else { return }
+            
+            let finalText: String
             switch result {
-            case .success(let text) where !text.isEmpty:
-                self.pasteboardService.endSession(finalText: text, shouldPaste: shouldPaste, shouldCopy: shouldCopy)
-                self.panelController.hideAfterDelay()
-            case .success:
-                self.pasteboardService.cancelSession()
-                self.panelController.hide()
+            case .success(let engineText):
+                finalText = isUserEdited ? userEditedText : (engineText.isEmpty ? userEditedText : engineText)
             case .failure(let error):
                 let msg = error.localizedDescription
-                if msg.contains("No speech detected") || msg.contains("cancelled") {
-                    self.pasteboardService.cancelSession()
-                    self.panelController.hide()
+                if isUserEdited {
+                    finalText = userEditedText
+                } else if msg.contains("No speech detected") || msg.contains("cancelled") {
+                    finalText = ""
                 } else {
                     self.pasteboardService.cancelSession()
                     self.handleError(error)
+                    return
                 }
+            }
+
+            if !finalText.isEmpty {
+                self.pasteboardService.endSession(finalText: finalText, shouldPaste: shouldPaste, shouldCopy: shouldCopy)
+                self.panelController.hideAfterDelay()
+            } else {
+                self.pasteboardService.cancelSession()
+                self.panelController.hide()
             }
         }
     }

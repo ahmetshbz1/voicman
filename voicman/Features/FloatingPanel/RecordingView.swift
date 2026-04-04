@@ -112,7 +112,13 @@ struct RecordingView: View {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical, showsIndicators: true) {
                         VStack(spacing: 0) {
-                            TextEditor(text: $viewModel.partialText)
+                            TextEditor(text: Binding(
+                                get: { viewModel.partialText },
+                                set: { 
+                                    viewModel.isUserEdited = true
+                                    viewModel.partialText = $0 
+                                }
+                            ))
                                 .scrollContentBackground(.hidden)
                                 .background(Color.clear)
                                 .focused($isTextFieldFocused)
