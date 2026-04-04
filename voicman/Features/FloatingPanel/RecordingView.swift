@@ -6,10 +6,13 @@ struct RecordingView: View {
     var onTap: (() -> Void)?
     var onSecondaryTap: (() -> Void)?
     var onCloseTap: (() -> Void)?
+    
+    @FocusState private var isTextFieldFocused: Bool
 
     var body: some View {
         panelContent
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .animation(.easeOut(duration: 0.25), value: viewModel.isExpanded)
     }
 
     private var panelContent: some View {
@@ -36,53 +39,83 @@ struct RecordingView: View {
     }
 
     private var activePanel: some View {
-        HStack(spacing: 0) {
-            Button { onTap?() } label: {
-                ZStack {
-                    Circle()
-                        .fill(.white.opacity(0.1))
-                        .frame(width: 30, height: 30)
-                    Image(systemName: viewModel.state == .paused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .contentTransition(.symbolEffect(.replace))
-                }
-            }
-            .buttonStyle(TapStyle())
-            .padding(.leading, 12)
-
-            AudioWave(level: viewModel.state == .paused ? 0 : viewModel.audioLevel)
-                .frame(width: 44, height: 22)
-                .padding(.leading, 10)
-
-            Text(statusText)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(statusOpacity))
-                .lineLimit(1)
-                .truncationMode(.head)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 8)
-                .padding(.trailing, 16)
-                .animation(.easeOut(duration: 0.1), value: viewModel.partialText)
-                .animation(.easeOut(duration: 0.15), value: viewModel.state)
-
-            if viewModel.state == .paused {
-                Button { onSecondaryTap?() } label: {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .frame(width: 30, height: 30)
-                        .background(Circle().fill(.white.opacity(0.08)))
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Button { onTap?() } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.1))
+                            .frame(width: 30, height: 30)
+                        Image(systemName: viewModel.state == .paused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .contentTransition(.symbolEffect(.replace))
+                    }
                 }
                 .buttonStyle(TapStyle())
-                .padding(.trailing, 12)
-                .transition(.scale.combined(with: .opacity))
-            }
+                .padding(.leading, 12)
 
-            inlineCloseButton
-                .padding(.trailing, 10)
+                AudioWave(level: viewModel.state == .paused ? 0 : viewModel.audioLevel)
+                    .frame(width: 44, height: 22)
+                    .padding(.leading, 10)
+
+                if viewModel.isExpanded {
+                    Spacer()
+                } else {
+                    Text(statusText)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(statusOpacity))
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 8)
+                        .padding(.trailing, 16)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            viewModel.isExpanded = true
+                        }
+                        .animation(.easeOut(duration: 0.1), value: viewModel.partialText)
+                        .animation(.easeOut(duration: 0.15), value: viewModel.state)
+                }
+
+                if viewModel.state == .paused || viewModel.isExpanded {
+                    Button { onSecondaryTap?() } label: {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .frame(width: 30, height: 30)
+                            .background(Circle().fill(.white.opacity(0.08)))
+                    }
+                    .buttonStyle(TapStyle())
+                    .padding(.trailing, 12)
+                    .transition(.scale.combined(with: .opacity))
+                }
+
+                inlineCloseButton
+                    .padding(.trailing, 10)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+
+            if viewModel.isExpanded {
+                TextEditor(text: $viewModel.partialText)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.clear)
+                    .focused($isTextFieldFocused)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
         }
-        .panelChrome()
+        .onChange(of: viewModel.isExpanded) { oldValue, expanded in
+            if expanded {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    isTextFieldFocused = true
+                }
+            }
+        }
     }
 
     private var statusText: String {

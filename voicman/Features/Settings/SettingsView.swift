@@ -53,11 +53,11 @@ struct SettingsView: View {
                 keyCode:   $recKeyCode,
                 modifiers: $recModifiers
             )
-            .onChange(of: recKeyCode) {
-                hotkeyKeyCode = Int(recKeyCode)
+            .onChange(of: recKeyCode) { oldValue, newValue in
+                hotkeyKeyCode = Int(newValue)
             }
-            .onChange(of: recModifiers) {
-                hotkeyModifiers = Int(recModifiers)
+            .onChange(of: recModifiers) { oldValue, newValue in
+                hotkeyModifiers = Int(newValue)
             }
         }
     }

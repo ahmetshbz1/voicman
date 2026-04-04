@@ -17,6 +17,7 @@ final class RecordingViewModel: ObservableObject {
     @Published var isDragging: Bool = false
     @Published var audioLevel: Float = 0
     @Published var partialText: String = ""
+    @Published var isExpanded: Bool = false
 
     func transition(to newState: State) {
         let previousState = state
@@ -26,9 +27,13 @@ final class RecordingViewModel: ObservableObject {
         }
         if newState == .recording && previousState == .idle {
             partialText = ""
+            isExpanded = false
         }
         if newState == .paused {
             audioLevel = 0
+        }
+        if newState == .transcribing || newState == .idle {
+            isExpanded = false
         }
     }
 

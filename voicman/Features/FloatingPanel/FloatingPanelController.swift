@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Combine
 
 private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
     override var isOpaque: Bool { false }
@@ -21,8 +22,9 @@ private final class LongPressDraggablePanel: NSPanel {
 
     private var dragWorkItem: DispatchWorkItem?
     private var isDragInProgress = false
+    var dynamicCanBecomeKey: Bool = false
 
-    override var canBecomeKey: Bool { false }
+    override var canBecomeKey: Bool { dynamicCanBecomeKey }
     override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
@@ -84,6 +86,7 @@ final class FloatingPanelController {
     var onCloseTapped: (() -> Void)?
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
+    private var cancellables = Set<AnyCancellable>()
 
     init() {
         setupPanel()
@@ -148,6 +151,7 @@ final class FloatingPanelController {
 
         let container = NSView(frame: NSRect(origin: .zero, size: Constants.size))
         container.wantsLayer = true
+        container.autoresizingMask = [.width, .height]
         container.layer?.backgroundColor = NSColor(white: 0.11, alpha: 1).cgColor
         container.layer?.cornerRadius = Constants.cornerRadius
         container.layer?.masksToBounds = true
@@ -171,6 +175,39 @@ final class FloatingPanelController {
 
         positionAtBottomCenter(panel)
         self.panel = panel
+
+        viewModel.$isExpanded
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] expanded in
+                self?.animatePanelSize(expanded: expanded)
+            }
+            .store(in: &cancellables)
+    }
+
+    private func animatePanelSize(expanded: Bool) {
+        guard let panel = panel as? LongPressDraggablePanel else { return }
+        
+        panel.dynamicCanBecomeKey = expanded
+        if expanded {
+            panel.makeKey()
+        } else {
+            panel.resignKey()
+            NSApp.deactivate()
+        }
+        
+        let newSize = expanded ? NSSize(width: 380, height: 200) : Constants.size
+        var frame = panel.frame
+        
+        frame.origin.x -= (newSize.width - frame.width) / 2
+        frame.size = newSize
+        
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.25
+            context.allowsImplicitAnimation = true
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            panel.animator().setFrame(frame, display: true)
+        }, completionHandler: nil)
     }
 
     private func performLongPressHaptic() {
