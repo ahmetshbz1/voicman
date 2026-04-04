@@ -113,6 +113,7 @@ final class FloatingPanelController {
         panel.becomesKeyOnlyIfNeeded = true
         panel.isMovableByWindowBackground = false
         panel.onLongPress = { [weak self] in
+            self?.performLongPressHaptic()
             self?.viewModel.isDragging = true
         }
         panel.onDragEnded = { [weak self] in
@@ -143,6 +144,10 @@ final class FloatingPanelController {
 
         positionAtBottomCenter(panel)
         self.panel = panel
+    }
+
+    private func performLongPressHaptic() {
+        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .default)
     }
 
     private func positionAtBottomCenter(_ panel: NSPanel) {
