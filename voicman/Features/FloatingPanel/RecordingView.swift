@@ -168,8 +168,8 @@ private struct AudioWave: View {
         HStack(spacing: 3) {
             ForEach(0..<5, id: \.self) { index in
                 Capsule()
-                    .fill(barGradient(for: index))
-                    .frame(width: 4, height: barHeight(for: index))
+                    .fill(.white)
+                    .frame(width: 2, height: barHeight(for: index))
             }
         }
         .frame(height: 22)
@@ -183,13 +183,6 @@ private struct AudioWave: View {
         let base = CGFloat(8 + index % 2)
         return min(max(base + normalizedLevel * 12 * wave, 7), 22)
     }
-
-    private func barGradient(for index: Int) -> LinearGradient {
-        let colors: [Color] = index.isMultiple(of: 2)
-            ? [.red.opacity(0.9), .orange.opacity(0.65)]
-            : [.pink.opacity(0.85), .orange.opacity(0.5)]
-        return LinearGradient(colors: colors, startPoint: .bottom, endPoint: .top)
-    }
 }
 
 private struct TypingIndicator: View {
@@ -200,7 +193,7 @@ private struct TypingIndicator: View {
         HStack(spacing: 4) {
             ForEach(0..<3, id: \.self) { i in
                 Circle()
-                    .fill(.cyan.opacity(i == active ? 0.8 : 0.15))
+                    .fill(.white.opacity(i == active ? 0.8 : 0.15))
                     .frame(width: i == active ? 6 : 4, height: i == active ? 6 : 4)
                     .offset(y: i == active ? -1 : 0)
                     .animation(.easeInOut(duration: 0.18), value: active)
