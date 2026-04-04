@@ -3,15 +3,27 @@ import SwiftUI
 
 private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
     override var isOpaque: Bool { false }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            (window as? LongPressDraggablePanel)?.onEscape?()
+            return
+        }
+        super.keyDown(with: event)
+    }
 }
 
 private final class LongPressDraggablePanel: NSPanel {
     var onLongPress: (() -> Void)?
     var onDragEnded: (() -> Void)?
+    var onEscape: (() -> Void)?
     var longPressDelay: TimeInterval = 0.35
 
     private var dragWorkItem: DispatchWorkItem?
     private var isDragInProgress = false
+
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
@@ -28,6 +40,14 @@ private final class LongPressDraggablePanel: NSPanel {
         default:
             super.sendEvent(event)
         }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            onEscape?()
+            return
+        }
+        super.keyDown(with: event)
     }
 
     private func scheduleLongPress(for event: NSEvent) {
@@ -61,6 +81,7 @@ final class FloatingPanelController {
     let viewModel = RecordingViewModel()
     var onButtonTapped: (() -> Void)?
     var onSecondaryButtonTapped: (() -> Void)?
+    var onCloseTapped: (() -> Void)?
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
 
@@ -72,6 +93,10 @@ final class FloatingPanelController {
         hideTask?.cancel()
         hideTask = nil
         panel?.orderFrontRegardless()
+        panel?.makeKey()
+        if let responder = panel?.contentView?.subviews.first {
+            panel?.makeFirstResponder(responder)
+        }
     }
 
     func hide() {
@@ -94,7 +119,8 @@ final class FloatingPanelController {
         let rootView = RecordingView(
             viewModel: viewModel,
             onTap: { [weak self] in self?.onButtonTapped?() },
-            onSecondaryTap: { [weak self] in self?.onSecondaryButtonTapped?() }
+            onSecondaryTap: { [weak self] in self?.onSecondaryButtonTapped?() },
+            onCloseTap: { [weak self] in self?.onCloseTapped?() }
         )
 
         let panel = LongPressDraggablePanel(
@@ -111,6 +137,7 @@ final class FloatingPanelController {
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         panel.isFloatingPanel = true
         panel.becomesKeyOnlyIfNeeded = true
+        panel.acceptsMouseMovedEvents = true
         panel.isMovableByWindowBackground = false
         panel.onLongPress = { [weak self] in
             self?.performLongPressHaptic()
@@ -118,6 +145,9 @@ final class FloatingPanelController {
         }
         panel.onDragEnded = { [weak self] in
             self?.viewModel.isDragging = false
+        }
+        panel.onEscape = { [weak self] in
+            self?.onCloseTapped?()
         }
 
         let container = NSView(frame: NSRect(origin: .zero, size: Constants.size))
@@ -141,6 +171,7 @@ final class FloatingPanelController {
             hosting.bottomAnchor.constraint(equalTo: container.bottomAnchor)
         ])
         panel.contentView = container
+        panel.initialFirstResponder = hosting
 
         positionAtBottomCenter(panel)
         self.panel = panel

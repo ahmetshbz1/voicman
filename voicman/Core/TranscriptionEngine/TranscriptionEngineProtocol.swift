@@ -8,6 +8,8 @@ protocol TranscriptionEngineProtocol: AnyObject {
     func startRecognition(locale: String, onPartialResult: @MainActor @escaping (String) -> Void)
     /// Ses buffer'ı ekler (AudioEngine'den akış).
     func appendBuffer(_ buffer: AVAudioPCMBuffer)
+    /// Aktif tanımayı nihai sonuç üretmeden iptal eder.
+    func cancel()
     /// Tanımayı sonlandırır ve nihai metni döner.
     func finalize(completion: @MainActor @escaping (Result<String, Error>) -> Void)
 }

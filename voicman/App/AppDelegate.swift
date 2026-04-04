@@ -70,6 +70,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panelController.onSecondaryButtonTapped = { [weak self] in
             self?.stopRecording()
         }
+        panelController.onCloseTapped = { [weak self] in
+            self?.cancelRecording()
+        }
 
         transcriptionEngine.requestAuthorization { _ in }
     }
@@ -196,6 +199,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+
+    private func cancelRecording() {
+        audioEngine.stop()
+        transcriptionEngine.cancel()
+        pasteboardService.cancelSession()
+        panelController.hide()
     }
 
     // MARK: - Yardımcı

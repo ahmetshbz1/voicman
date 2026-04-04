@@ -5,6 +5,7 @@ struct RecordingView: View {
     @ObservedObject var viewModel: RecordingViewModel
     var onTap: (() -> Void)?
     var onSecondaryTap: (() -> Void)?
+    var onCloseTap: (() -> Void)?
 
     var body: some View {
         panelContent
@@ -77,6 +78,9 @@ struct RecordingView: View {
                 .padding(.trailing, 12)
                 .transition(.scale.combined(with: .opacity))
             }
+
+            inlineCloseButton
+                .padding(.trailing, 10)
         }
         .panelChrome()
     }
@@ -101,6 +105,8 @@ struct RecordingView: View {
             Text("Yazılıyor...")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.55))
+            Spacer(minLength: 0)
+            inlineCloseButton
         }
         .panelChrome()
     }
@@ -112,8 +118,21 @@ struct RecordingView: View {
             Text("Hata")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.7))
+            Spacer(minLength: 0)
+            inlineCloseButton
         }
         .panelChrome()
+    }
+
+    private var inlineCloseButton: some View {
+        Button { onCloseTap?() } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white.opacity(0.72))
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(.white.opacity(0.06)))
+        }
+        .buttonStyle(TapStyle())
     }
 }
 

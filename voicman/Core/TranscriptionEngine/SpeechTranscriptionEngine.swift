@@ -67,6 +67,14 @@ final class SpeechTranscriptionEngine: TranscriptionEngineProtocol {
         recognitionRequest?.append(buffer)
     }
 
+    func cancel() {
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        recognitionRequest = nil
+        finalCompletion = nil
+        lastPartialResult = ""
+    }
+
     func finalize(completion: @MainActor @escaping (Result<String, Error>) -> Void) {
         finalCompletion = completion
 
