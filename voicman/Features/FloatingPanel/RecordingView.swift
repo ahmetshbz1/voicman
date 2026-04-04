@@ -54,6 +54,9 @@ struct RecordingView: View {
                 }
                 .buttonStyle(HoverableTapStyle())
                 .padding(.leading, 12)
+                .onHover { isHovered in
+                    if isHovered { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                }
 
                 AudioWave(level: viewModel.state == .paused ? 0 : viewModel.audioLevel)
                     .frame(width: 44, height: 22)
@@ -90,6 +93,9 @@ struct RecordingView: View {
                     .buttonStyle(HoverableTapStyle())
                     .padding(.trailing, 12)
                     .transition(.scale.combined(with: .opacity))
+                    .onHover { isHovered in
+                        if isHovered { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+                    }
                 }
 
                 inlineCloseButton
@@ -190,6 +196,9 @@ struct RecordingView: View {
                 .background(Circle().fill(.white.opacity(0.06)))
         }
         .buttonStyle(HoverableTapStyle())
+        .onHover { isHovered in
+            if isHovered { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
     }
 }
 

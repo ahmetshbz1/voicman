@@ -30,7 +30,10 @@ private final class LongPressDraggablePanel: NSPanel {
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
         case .leftMouseDown:
-            scheduleLongPress(for: event)
+            let isHoveringButton = NSCursor.current == .pointingHand
+            if !isHoveringButton {
+                scheduleLongPress(for: event)
+            }
             super.sendEvent(event)
         case .leftMouseUp:
             cancelLongPress()
