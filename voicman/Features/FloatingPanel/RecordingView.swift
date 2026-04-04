@@ -52,7 +52,7 @@ struct RecordingView: View {
                             .contentTransition(.symbolEffect(.replace))
                     }
                 }
-                .buttonStyle(TapStyle())
+                .buttonStyle(HoverableTapStyle())
                 .padding(.leading, 12)
 
                 AudioWave(level: viewModel.state == .paused ? 0 : viewModel.audioLevel)
@@ -87,7 +87,7 @@ struct RecordingView: View {
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(.white.opacity(0.08)))
                     }
-                    .buttonStyle(TapStyle())
+                    .buttonStyle(HoverableTapStyle())
                     .padding(.trailing, 12)
                     .transition(.scale.combined(with: .opacity))
                 }
@@ -189,7 +189,7 @@ struct RecordingView: View {
                 .frame(width: 22, height: 22)
                 .background(Circle().fill(.white.opacity(0.06)))
         }
-        .buttonStyle(TapStyle())
+        .buttonStyle(HoverableTapStyle())
     }
 }
 
@@ -207,11 +207,19 @@ private extension View {
     }
 }
 
-private struct TapStyle: ButtonStyle {
+private struct HoverableTapStyle: ButtonStyle {
+    @State private var isHovered = false
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .animation(.easeOut(duration: 0.08), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.7 : 1.0)
+            .brightness(isHovered ? 0.2 : 0) // Hover olduğunda rengi biraz aydınlatır
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.15), value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+            }
     }
 }
 
