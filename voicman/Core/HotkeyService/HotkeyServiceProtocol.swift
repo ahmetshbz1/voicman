@@ -9,8 +9,12 @@ protocol HotkeyServiceProtocol: AnyObject {
     var onHotkeyUp: ((TimeInterval) -> Void)? { get set }
     /// Yalnızca Enter (Return) basıldığında tetiklenir (Global)
     var onEnterPressed: (() -> Void)? { get set }
+    /// Yalnızca Escape basıldığında tetiklenir (Global)
+    var onEscapePressed: (() -> Void)? { get set }
 
     func unregister()
     func registerEnterHotkey()
+    func registerEscapeHotkey()
     func unregisterEnterHotkey()
+    func unregisterEscapeHotkey()
 }

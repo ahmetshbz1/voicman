@@ -3,13 +3,20 @@ import Carbon.HIToolbox
 
 @MainActor
 final class HotkeyService: HotkeyServiceProtocol {
+    enum RegisteredHotKeyID: UInt32 {
+        case main = 1
+        case enter = 2
+        case escape = 3
+    }
 
     var onHotkeyDown: (() -> Void)?
     var onHotkeyUp: ((TimeInterval) -> Void)?
     var onEnterPressed: (() -> Void)?
+    var onEscapePressed: (() -> Void)?
 
     private var hotKeyRef: EventHotKeyRef?
     private var enterHotKeyRef: EventHotKeyRef?
+    private var escapeHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var keyDownTime: Date?
 
@@ -17,6 +24,7 @@ final class HotkeyService: HotkeyServiceProtocol {
 
     func unregister() {
         unregisterEnterHotkey()
+        unregisterEscapeHotkey()
         if let ref = eventHandlerRef { RemoveEventHandler(ref) }
         if let ref = hotKeyRef { UnregisterEventHotKey(ref) }
         eventHandlerRef = nil
@@ -25,24 +33,25 @@ final class HotkeyService: HotkeyServiceProtocol {
 
     func registerEnterHotkey() {
         guard enterHotKeyRef == nil else { return }
-        var hotKeyID = EventHotKeyID()
-        hotKeyID.signature = fourCharCode("VMHK")
-        hotKeyID.id = 2 // Enter için ayrı bir ID
+        enterHotKeyRef = registerAuxiliaryHotkey(keyCode: UInt32(kVK_Return), id: .enter)
+    }
 
-        RegisterEventHotKey(
-            UInt32(kVK_Return),
-            0, // Modifier yok
-            hotKeyID,
-            GetApplicationEventTarget(),
-            0,
-            &enterHotKeyRef
-        )
+    func registerEscapeHotkey() {
+        guard escapeHotKeyRef == nil else { return }
+        escapeHotKeyRef = registerAuxiliaryHotkey(keyCode: UInt32(kVK_Escape), id: .escape)
     }
 
     func unregisterEnterHotkey() {
         if let ref = enterHotKeyRef {
             UnregisterEventHotKey(ref)
             enterHotKeyRef = nil
+        }
+    }
+
+    func unregisterEscapeHotkey() {
+        if let ref = escapeHotKeyRef {
+            UnregisterEventHotKey(ref)
+            escapeHotKeyRef = nil
         }
     }
 
@@ -53,7 +62,7 @@ final class HotkeyService: HotkeyServiceProtocol {
 
         var hotKeyID = EventHotKeyID()
         hotKeyID.signature = fourCharCode("VMHK")
-        hotKeyID.id = 1
+        hotKeyID.id = RegisteredHotKeyID.main.rawValue
 
         let status = RegisterEventHotKey(
             keyCode,
@@ -101,13 +110,24 @@ final class HotkeyService: HotkeyServiceProtocol {
             nil,
             &hotKeyID
         )
-        guard hotKeyID.id == 1 || hotKeyID.id == 2 else { return }
+        guard let id = RegisteredHotKeyID(rawValue: hotKeyID.id) else { return }
 
         let kind = GetEventKind(event)
-        
-        if hotKeyID.id == 2 {
+
+        handleRegisteredHotKey(id: id, kind: kind)
+    }
+
+    func handleRegisteredHotKey(id: RegisteredHotKeyID, kind: UInt32) {
+        if id == .enter {
             if kind == UInt32(kEventHotKeyPressed) {
                 onEnterPressed?()
+            }
+            return
+        }
+
+        if id == .escape {
+            if kind == UInt32(kEventHotKeyPressed) {
+                onEscapePressed?()
             }
             return
         }
@@ -148,5 +168,24 @@ final class HotkeyService: HotkeyServiceProtocol {
 
     private func fourCharCode(_ s: String) -> FourCharCode {
         s.utf8.reduce(0) { ($0 << 8) | FourCharCode($1) }
+    }
+
+    private func registerAuxiliaryHotkey(keyCode: UInt32, id: RegisteredHotKeyID) -> EventHotKeyRef? {
+        var hotKeyID = EventHotKeyID()
+        hotKeyID.signature = fourCharCode("VMHK")
+        hotKeyID.id = id.rawValue
+
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            keyCode,
+            0,
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &ref
+        )
+
+        guard status == noErr else { return nil }
+        return ref
     }
 }
