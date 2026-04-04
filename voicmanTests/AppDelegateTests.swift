@@ -313,6 +313,31 @@ final class AppDelegateTests: XCTestCase {
         )
     }
 
+    func test_stopRecording_whenEngineReturnsEmptyText_usesCurrentPanelText() {
+        let transcriptionEngine = MockTranscriptionEngine()
+        let pasteboardService = MockPasteboardService()
+        let panelController = MockFloatingPanelController()
+        let sut = AppDelegate(
+            hotkeyService: MockHotkeyService(),
+            audioEngine: MockAudioEngine(),
+            transcriptionEngine: transcriptionEngine,
+            pasteboardService: pasteboardService,
+            panelController: panelController,
+            settingsProvider: StubRecordingSettingsProvider(locale: "tr-TR", shouldAutoPaste: false, shouldAutoCopyFinalText: true)
+        )
+
+        sut.startRecording()
+        panelController.viewModel.partialText = "fallback metin"
+
+        sut.stopRecording()
+        transcriptionEngine.finalizeCompletion?(Result<String, Error>.success(""))
+
+        XCTAssertEqual(
+            pasteboardService.endSessionCalls,
+            [.init(finalText: "fallback metin", shouldPaste: false, shouldCopy: true)]
+        )
+    }
+
     func test_stopRecording_withNoSpeechError_cancelsPasteboardSessionAndHidesPanel() {
         let transcriptionEngine = MockTranscriptionEngine()
         let pasteboardService = MockPasteboardService()
@@ -333,6 +358,28 @@ final class AppDelegateTests: XCTestCase {
         XCTAssertEqual(pasteboardService.cancelSessionCallCount, 1)
         XCTAssertTrue(pasteboardService.endSessionCalls.isEmpty)
         XCTAssertEqual(panelController.hideCallCount, 1)
+    }
+
+    func test_stopRecording_withGenericFailure_cancelsSessionAndShowsErrorState() {
+        let transcriptionEngine = MockTranscriptionEngine()
+        let pasteboardService = MockPasteboardService()
+        let panelController = MockFloatingPanelController()
+        let sut = AppDelegate(
+            hotkeyService: MockHotkeyService(),
+            audioEngine: MockAudioEngine(),
+            transcriptionEngine: transcriptionEngine,
+            pasteboardService: pasteboardService,
+            panelController: panelController,
+            settingsProvider: StubRecordingSettingsProvider(locale: "tr-TR", shouldAutoPaste: true, shouldAutoCopyFinalText: true)
+        )
+        sut.startRecording()
+
+        sut.stopRecording()
+        transcriptionEngine.finalizeCompletion?(Result<String, Error>.failure(TestErrors.genericFailure))
+
+        XCTAssertEqual(pasteboardService.cancelSessionCallCount, 1)
+        XCTAssertTrue(pasteboardService.endSessionCalls.isEmpty)
+        XCTAssertEqual(panelController.viewModel.state, .error("Generic failure"))
     }
 
     func test_cancelRecording_stopsServicesAndHidesPanel() {
