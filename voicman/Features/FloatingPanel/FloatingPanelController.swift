@@ -196,7 +196,7 @@ final class FloatingPanelController {
             NSApp.deactivate()
         }
         
-        let newSize = expanded ? NSSize(width: 380, height: 200) : Constants.size
+        let newSize = expanded ? NSSize(width: 380, height: 160) : Constants.size
         var frame = panel.frame
         
         frame.origin.x -= (newSize.width - frame.width) / 2

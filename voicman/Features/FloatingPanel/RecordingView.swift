@@ -61,6 +61,11 @@ struct RecordingView: View {
 
                 if viewModel.isExpanded {
                     Spacer()
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) {
+                            viewModel.isExpanded = false
+                        }
                 } else {
                     Text(statusText)
                         .font(.system(size: 12, weight: .medium))
@@ -96,6 +101,12 @@ struct RecordingView: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                if viewModel.isExpanded {
+                    viewModel.isExpanded = false
+                }
+            }
 
             if viewModel.isExpanded {
                 ScrollViewReader { proxy in
@@ -110,7 +121,7 @@ struct RecordingView: View {
                                 .padding(.horizontal, 20)
                                 .padding(.bottom, 10)
                                 // Yeterli alan açmak için minimum yükseklik:
-                                .frame(minHeight: 140, maxHeight: .infinity, alignment: .topLeading)
+                                .frame(minHeight: 100, maxHeight: .infinity, alignment: .topLeading)
                             
                             Color.clear
                                 .frame(height: 1)
