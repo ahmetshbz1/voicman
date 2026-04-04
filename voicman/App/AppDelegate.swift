@@ -124,6 +124,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.stopRecording()
             }
         }
+
+        hotkeyService.onEnterPressed = { [weak self] in
+            guard let self else { return }
+            let state = self.panelController.viewModel.state
+            if state == .recording || state == .paused {
+                self.stopRecording()
+            }
+        }
     }
 
     // MARK: - Kayıt Akışı
@@ -134,6 +142,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pasteboardService.beginSession()
         panelController.show()
         panelController.viewModel.transition(to: .recording)
+        hotkeyService.registerEnterHotkey()
         startAudioCapture()
 
         transcriptionEngine.startRecognition(locale: locale) { [weak self] text in
@@ -178,6 +187,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         panelController.viewModel.transition(to: .transcribing)
         audioEngine.stop()
+        hotkeyService.unregisterEnterHotkey()
 
         let shouldPaste = UserDefaults.standard.object(forKey: "autoPaste") as? Bool ?? true
         let shouldCopy = UserDefaults.standard.object(forKey: "autoCopyFinalText") as? Bool ?? true
@@ -214,6 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func cancelRecording() {
         audioEngine.stop()
+        hotkeyService.unregisterEnterHotkey()
         transcriptionEngine.cancel()
         pasteboardService.cancelSession()
         panelController.hide()

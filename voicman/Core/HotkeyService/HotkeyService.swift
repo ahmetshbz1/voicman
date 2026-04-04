@@ -6,18 +6,44 @@ final class HotkeyService: HotkeyServiceProtocol {
 
     var onHotkeyDown: (() -> Void)?
     var onHotkeyUp: ((TimeInterval) -> Void)?
+    var onEnterPressed: (() -> Void)?
 
     private var hotKeyRef: EventHotKeyRef?
+    private var enterHotKeyRef: EventHotKeyRef?
     private var eventHandlerRef: EventHandlerRef?
     private var keyDownTime: Date?
 
     init() { register() }
 
     func unregister() {
+        unregisterEnterHotkey()
         if let ref = eventHandlerRef { RemoveEventHandler(ref) }
         if let ref = hotKeyRef { UnregisterEventHotKey(ref) }
         eventHandlerRef = nil
         hotKeyRef = nil
+    }
+
+    func registerEnterHotkey() {
+        guard enterHotKeyRef == nil else { return }
+        var hotKeyID = EventHotKeyID()
+        hotKeyID.signature = fourCharCode("VMHK")
+        hotKeyID.id = 2 // Enter için ayrı bir ID
+
+        RegisterEventHotKey(
+            UInt32(kVK_Return),
+            0, // Modifier yok
+            hotKeyID,
+            GetApplicationEventTarget(),
+            0,
+            &enterHotKeyRef
+        )
+    }
+
+    func unregisterEnterHotkey() {
+        if let ref = enterHotKeyRef {
+            UnregisterEventHotKey(ref)
+            enterHotKeyRef = nil
+        }
     }
 
     // MARK: - Kayıt
@@ -75,12 +101,22 @@ final class HotkeyService: HotkeyServiceProtocol {
             nil,
             &hotKeyID
         )
-        guard hotKeyID.id == 1 else { return }
+        guard hotKeyID.id == 1 || hotKeyID.id == 2 else { return }
 
         let kind = GetEventKind(event)
+        
+        if hotKeyID.id == 2 {
+            if kind == UInt32(kEventHotKeyPressed) {
+                onEnterPressed?()
+            }
+            return
+        }
+
         if kind == UInt32(kEventHotKeyPressed) {
-            keyDownTime = Date()
-            onHotkeyDown?()
+            if keyDownTime == nil {
+                keyDownTime = Date()
+                onHotkeyDown?()
+            }
         } else if kind == UInt32(kEventHotKeyReleased) {
             let duration = keyDownTime.map { Date().timeIntervalSince($0) } ?? 0
             keyDownTime = nil

@@ -4,20 +4,13 @@ import Combine
 
 private final class TransparentHostingView<Content: View>: NSHostingView<Content> {
     override var isOpaque: Bool { false }
-
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 {
-            (window as? LongPressDraggablePanel)?.onEscape?()
-            return
-        }
-        super.keyDown(with: event)
-    }
 }
 
 private final class LongPressDraggablePanel: NSPanel {
     var onLongPress: (() -> Void)?
     var onDragEnded: (() -> Void)?
     var onEscape: (() -> Void)?
+    var onReturn: (() -> Void)?
     var longPressDelay: TimeInterval = 0.35
 
     private var dragWorkItem: DispatchWorkItem?
@@ -28,6 +21,19 @@ private final class LongPressDraggablePanel: NSPanel {
     override var canBecomeMain: Bool { false }
 
     override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown {
+            if event.keyCode == 53 { // Escape
+                onEscape?()
+                return
+            }
+            if event.keyCode == 36 { // Return / Enter
+                if !event.modifierFlags.contains(.shift) {
+                    onReturn?()
+                    return
+                }
+            }
+        }
+
         switch event.type {
         case .leftMouseDown:
             let isHoveringButton = NSCursor.current == .pointingHand
@@ -45,14 +51,6 @@ private final class LongPressDraggablePanel: NSPanel {
         default:
             super.sendEvent(event)
         }
-    }
-
-    override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 {
-            onEscape?()
-            return
-        }
-        super.keyDown(with: event)
     }
 
     private func scheduleLongPress(for event: NSEvent) {
@@ -150,6 +148,9 @@ final class FloatingPanelController {
         }
         panel.onEscape = { [weak self] in
             self?.onCloseTapped?()
+        }
+        panel.onReturn = { [weak self] in
+            self?.onSecondaryButtonTapped?()
         }
 
         let container = NSView(frame: NSRect(origin: .zero, size: Constants.size))
