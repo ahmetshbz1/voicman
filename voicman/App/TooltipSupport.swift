@@ -7,31 +7,21 @@ private enum TooltipEdge {
 }
 
 private struct TooltipBubbleView: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     let text: String
 
     var body: some View {
         Text(text)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(colorScheme == .dark ? Color.black : Color.white)
+            .foregroundStyle(Color.black)
             .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(backgroundColor, in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.white.opacity(0.96), in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(borderColor, lineWidth: 1)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.12 : 0.24), radius: 8, y: 4)
-    }
-
-    private var backgroundColor: Color {
-        colorScheme == .dark ? Color.white.opacity(0.96) : Color.black.opacity(0.88)
-    }
-
-    private var borderColor: Color {
-        colorScheme == .dark ? Color.black.opacity(0.08) : Color.white.opacity(0.08)
+            .shadow(color: Color.black.opacity(0.12), radius: 8, y: 4)
     }
 }
 
