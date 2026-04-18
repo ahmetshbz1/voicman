@@ -219,9 +219,9 @@ final class FloatingPanelController: FloatingPanelControlling {
         frame.size = newSize
         
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.25
+            context.duration = 0.16
             context.allowsImplicitAnimation = true
-            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.2, 1.0)
             panel.animator().setFrame(frame, display: true)
         }, completionHandler: nil)
     }

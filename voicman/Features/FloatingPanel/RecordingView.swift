@@ -12,7 +12,7 @@ struct RecordingView: View {
     var body: some View {
         panelContent
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeOut(duration: 0.25), value: viewModel.isExpanded)
+            .animation(.easeOut(duration: 0.16), value: viewModel.isExpanded)
     }
 
     private var panelContent: some View {
@@ -54,6 +54,7 @@ struct RecordingView: View {
                 }
                 .buttonStyle(HoverableTapStyle())
                 .padding(.leading, 12)
+                .voicmanTooltip(viewModel.state == .paused ? "Kaydı sürdür" : "Kaydı duraklat", alignment: .bottom, offsetY: 12)
                 .onHover { isHovered in
                     if isHovered { NSCursor.pointingHand.push() } else { NSCursor.pop() }
                 }
@@ -92,6 +93,7 @@ struct RecordingView: View {
                     }
                     .buttonStyle(HoverableTapStyle())
                     .padding(.trailing, 12)
+                    .voicmanTooltip(viewModel.isExpanded ? "Metni uygula" : "Kaydı tamamla", alignment: .bottom, offsetY: 12)
                     .transition(.scale.combined(with: .opacity))
                     .onHover { isHovered in
                         if isHovered { NSCursor.pointingHand.push() } else { NSCursor.pop() }
@@ -202,6 +204,7 @@ struct RecordingView: View {
                 .background(Circle().fill(.white.opacity(0.06)))
         }
         .buttonStyle(HoverableTapStyle())
+        .voicmanTooltip("Paneli kapat", alignment: .bottom, offsetY: 12)
         .onHover { isHovered in
             if isHovered { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }

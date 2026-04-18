@@ -116,7 +116,12 @@ struct OnboardingView: View {
             }
 
             if !granted {
-                OnboardingButton(label: buttonLabel, color: iconColor, isLoading: viewModel.isRequesting, action: action)
+                OnboardingButton(
+                    label: buttonLabel,
+                    color: iconColor,
+                    isLoading: viewModel.isRequesting,
+                    action: action
+                )
             }
         }
     }
