@@ -126,19 +126,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = statusItem?.button else { return }
         button.image = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Voicman")
-
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Ayarlar...", action: #selector(openSettings), keyEquivalent: ","))
-        menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Çıkış", action: #selector(quitApp), keyEquivalent: "q"))
-        statusItem?.menu = menu
+        button.action = #selector(openSettings)
+        button.target = self
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
-    @objc private func openSettings() {
+    @objc private func openSettings(_ sender: Any?) {
+        guard let button = statusItem?.button else { return }
+
         if settingsController == nil {
             settingsController = SettingsWindowController()
         }
-        settingsController?.show()
+
+        if let event = NSApp.currentEvent, event.type == .rightMouseUp {
+            showStatusMenu(relativeTo: button)
+            return
+        }
+
+        settingsController?.toggle(relativeTo: button)
+    }
+
+    private func showStatusMenu(relativeTo button: NSStatusBarButton) {
+        settingsController?.close()
+
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Ayarlar", action: #selector(openSettings), keyEquivalent: ""))
+        menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "Çıkış", action: #selector(quitApp), keyEquivalent: "q"))
+        statusItem?.menu = menu
+        button.performClick(nil)
+        statusItem?.menu = nil
     }
 
     @objc private func quitApp() {
